@@ -405,3 +405,26 @@ GitHub: [sanjay855](https://github.com/sanjay855)
 
 AI tools were used during the development of MyPrivateCloud to assist with implementation, troubleshooting, planning, and improving the overall development workflow.
 *MyPrivateCloud is a personal self-hosted cloud infrastructure project built for learning, experimentation, automation, and practical cloud engineering experience.*
+
+---
+
+## 🆕 Second Update: Visitor Access Request & Single-Use Read-Only Preview
+
+Added an interactive **Request-and-Approve Guest Preview** workflow so friends or recruiters can view the live dashboard UI without needing owner credentials or manual link sharing.
+
+### How It Works
+1. **Self-Service Request (`POST /request-guest`):** Visitors enter their name directly below the login form on `https://perch-condition-peso.ngrok-free.dev/login` to generate a private request ticket (`req_id`).
+2. **Real-Time Admin Approval (`GET /api/guest-requests` & `POST /approve-guest/<req_id>`):** A high-contrast notification card appears on the owner's dashboard every 3 seconds with **Approve** and **Deny** controls.
+3. **Inline Single-Use Link Delivery (`GET /check-guest/<req_id>`):** Once approved, the requester's login screen automatically reveals a clickable **Open Preview** button and a **Copy** button right underneath the name input box.
+4. **Atomic Token Burn & Read-Only Enforcement (`GET /guest/<token>`):** Opening the link consumes (`pop`) the cryptographic token immediately so it can only be used once within a 10-minute window, placing the visitor into a strict read-only session (`guest_mode`) where uploads, file views, downloads, and deletions are blocked (`403 Forbidden`).
+
+### Updated API Endpoints
+
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/request-guest` | Public | Submits a visitor's name and returns a private polling `req_id` |
+| `GET` | `/check-guest/<req_id>` | Public (`req_id`) | Polls approval status and delivers the single-use link once approved |
+| `GET` | `/api/guest-requests` | Owner Session | Lists pending visitor access requests for the admin dashboard |
+| `POST` | `/approve-guest/<req_id>` | Owner Session | Approves a pending request and generates a 10-minute single-use token |
+| `POST` | `/deny-guest/<req_id>` | Owner Session | Declines and removes a pending visitor request |
+| `GET` | `/guest/<token>` | Single-Use Token | Burns the token on first click and starts a read-only guest session |

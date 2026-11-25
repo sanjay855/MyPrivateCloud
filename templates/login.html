@@ -33,21 +33,38 @@
         Sign in
       </button>
     </form>
-	<hr style="margin: 1.5rem 0; border-color: #334155;">
+	
+<hr style="margin: 1.5rem 0; border-color: #334155;">
 <div style="text-align: left;">
-  <label style="font-size: 0.85rem; color: #94a3b8;">Friend / Recruiter Preview?</label>
+  <label style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">Friend / Recruiter Preview?</label>
   <div style="display: flex; gap: 8px; margin-top: 6px;">
-    <input type="text" id="guestName" placeholder="Enter your name" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff;">
-    <button type="button" onclick="requestGuestAccess()" style="padding: 8px 12px; border-radius: 6px; background: #0ea5e9; color: #fff; border: none; cursor: pointer;">Request Link</button>
+    <input type="text" id="guestName" placeholder="Enter your name" style="flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #f8fafc;">
+    <button type="button" id="reqBtn" onclick="requestGuestAccess()" style="padding: 8px 14px; border-radius: 6px; background: #0284c7; color: #ffffff; font-weight: 600; border: none; cursor: pointer;">Request Link</button>
   </div>
-  <p id="guestStatus" style="font-size: 0.8rem; color: #38bdf8; margin-top: 6px;"></p>
+  <p id="guestStatus" style="font-size: 0.85rem; color: #38bdf8; margin-top: 8px; font-weight: 500;"></p>
+
+  <!-- Auto-revealed inline box once Sanjay clicks Approve -->
+  <div id="guestLinkBox" style="display: none; margin-top: 10px; padding: 10px; border-radius: 8px; background: #ecfdf5; border: 1px solid #10b981; color: #064e3b;">
+    <div style="font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">✅ Approved! Single-use read-only link:</div>
+    <input type="text" id="generatedLink" readonly style="width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid #6ee7b7; background: #ffffff; color: #064e3b; font-size: 0.8rem; margin-bottom: 8px;">
+    <div style="display: flex; gap: 8px;">
+      <a id="openPreviewBtn" href="#" style="flex: 1; text-align: center; padding: 7px 10px; border-radius: 6px; background: #059669; color: #ffffff; text-decoration: none; font-size: 0.85rem; font-weight: 600;">Open Preview →</a>
+      <button type="button" onclick="copyGuestLink()" style="padding: 7px 12px; border-radius: 6px; background: #0f172a; color: #ffffff; border: none; font-size: 0.85rem; cursor: pointer;">Copy</button>
+    </div>
+  </div>
 </div>
 
 <script>
+let pollTimer = null;
+
 async function requestGuestAccess() {
   const name = document.getElementById("guestName").value.trim();
   const statusEl = document.getElementById("guestStatus");
+  const btn = document.getElementById("reqBtn");
   if (!name) { statusEl.textContent = "Please enter your name first."; return; }
+
+  btn.disabled = true;
+  btn.textContent = "Waiting...";
   const res = await fetch("/request-guest", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -55,8 +72,45 @@ async function requestGuestAccess() {
   });
   const data = await res.json();
   statusEl.textContent = data.message || data.error;
+
+  if (data.req_id) {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => checkApproval(data.req_id), 3000);
+  } else {
+    btn.disabled = false;
+    btn.textContent = "Request Link";
+  }
+}
+
+async function checkApproval(reqId) {
+  const res = await fetch(`/check-guest/${reqId}`);
+  const data = await res.json();
+  const statusEl = document.getElementById("guestStatus");
+  const btn = document.getElementById("reqBtn");
+
+  if (data.status === "approved" && data.one_time_link) {
+    clearInterval(pollTimer);
+    statusEl.textContent = "";
+    btn.textContent = "Approved";
+    document.getElementById("generatedLink").value = data.one_time_link;
+    document.getElementById("openPreviewBtn").href = data.one_time_link;
+    document.getElementById("guestLinkBox").style.display = "block";
+  } else if (data.status === "denied" || data.status === "expired") {
+    clearInterval(pollTimer);
+    statusEl.style.color = "#f87171";
+    statusEl.textContent = "Request was declined or expired.";
+    btn.disabled = false;
+    btn.textContent = "Request Link";
+  }
+}
+
+function copyGuestLink() {
+  const input = document.getElementById("generatedLink");
+  input.select();
+  navigator.clipboard?.writeText(input.value);
 }
 </script>
+
     <p style="margin:20px 0 0;font-size:12.5px;line-height:1.5;color:#5B6B77;text-align:center;">
       Only people with the password can view, upload or download files.
     </p>

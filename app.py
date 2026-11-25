@@ -22,9 +22,10 @@ MAX_TRANSFER_BYTES = 600 * 1024 * 1024             # 600 MB
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "MyCloudPass123")
 API_TOKEN = os.environ.get("API_TOKEN", "macrodroid-secret-token")
 
-# In-memory approval queue and single-use tokens
-PENDING_REQUESTS = {}  # {req_id: {"name": str, "time": str, "created": float}}
-GUEST_TOKENS = {}      # {token: {"name": str, "expires": float}}
+# In-memory request tracker and single-use tokens
+# REQUEST_TRACKER: {req_id: {"name": str, "time": str, "created": float, "status": "pending"|"approved"|"denied", "link": str|None}}
+REQUEST_TRACKER = {}
+GUEST_TOKENS = {}  # {token: {"name": str, "expires": float}}
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(META_FILE), exist_ok=True)
@@ -118,55 +119,87 @@ def request_guest():
     if not guest_name:
         return jsonify({"error": "Please enter your name."}), 400
 
-    # Clean old requests (> 30 mins) and cap queue at 10
+    # Clean entries older than 30 minutes
     now = time.time()
-    for k in [k for k, v in PENDING_REQUESTS.items() if now - v["created"] > 1800]:
-        PENDING_REQUESTS.pop(k, None)
-    if len(PENDING_REQUESTS) >= 10:
+    for k in [k for k, v in REQUEST_TRACKER.items() if now - v["created"] > 1800]:
+        REQUEST_TRACKER.pop(k, None)
+
+    pending_count = sum(1 for v in REQUEST_TRACKER.values() if v["status"] == "pending")
+    if pending_count >= 10:
         return jsonify({"error": "Approval queue is full. Try again later."}), 429
 
-    req_id = secrets.token_hex(4)
-    PENDING_REQUESTS[req_id] = {
+    req_id = secrets.token_urlsafe(8)
+    REQUEST_TRACKER[req_id] = {
         "name": guest_name,
-        "time": datetime.now().strftime("%H:%M:%S"),
-        "created": now
+        "time": datetime.now().strftime("%I:%M:%S %p"),
+        "created": now,
+        "status": "pending",
+        "link": None
     }
-    return jsonify({"status": "requested", "message": "Request sent! Ask Sanjay to approve it."}), 201
+    return jsonify({
+        "status": "pending",
+        "req_id": req_id,
+        "message": "Request sent! Waiting for Sanjay to approve..."
+    }), 201
+
+
+@app.route("/check-guest/<req_id>")
+def check_guest(req_id):
+    item = REQUEST_TRACKER.get(req_id)
+    if not item:
+        return jsonify({"status": "expired"}), 404
+    if item["status"] == "approved":
+        # Deliver the link once to the waiting browser, then clear it from tracker
+        link = item["link"]
+        REQUEST_TRACKER.pop(req_id, None)
+        return jsonify({"status": "approved", "one_time_link": link})
+    if item["status"] == "denied":
+        REQUEST_TRACKER.pop(req_id, None)
+        return jsonify({"status": "denied"})
+    return jsonify({"status": "pending"})
 
 
 @app.route("/api/guest-requests")
 @auth_required(allow_guest=False)
 def list_guest_requests():
-    items = [{"id": k, "name": v["name"], "time": v["time"]} for k, v in PENDING_REQUESTS.items()]
+    items = [
+        {"id": k, "name": v["name"], "time": v["time"]}
+        for k, v in REQUEST_TRACKER.items()
+        if v["status"] == "pending"
+    ]
     return jsonify({"requests": items})
 
 
 @app.route("/approve-guest/<req_id>", methods=["POST"])
 @auth_required(allow_guest=False)
 def approve_guest(req_id):
-    req = PENDING_REQUESTS.pop(req_id, None)
-    if not req:
+    item = REQUEST_TRACKER.get(req_id)
+    if not item or item["status"] != "pending":
         return jsonify({"error": "Request not found or already handled."}), 404
 
     token = secrets.token_urlsafe(16)
     GUEST_TOKENS[token] = {
-        "name": req["name"],
+        "name": item["name"],
         "expires": time.time() + 600  # 10-minute window to open once
     }
     link = f"https://perch-condition-peso.ngrok-free.dev/guest/{token}"
-    return jsonify({"status": "approved", "guest_name": req["name"], "one_time_link": link})
+    item["status"] = "approved"
+    item["link"] = link
+    return jsonify({"status": "approved", "guest_name": item["name"]})
 
 
 @app.route("/deny-guest/<req_id>", methods=["POST"])
 @auth_required(allow_guest=False)
 def deny_guest(req_id):
-    PENDING_REQUESTS.pop(req_id, None)
+    item = REQUEST_TRACKER.get(req_id)
+    if item:
+        item["status"] = "denied"
     return jsonify({"status": "denied"})
 
 
 @app.route("/guest/<token>")
 def guest_login(token):
-    # Immediately burn the token on first click so no second use is ever possible
+    # Immediately burn the token on first click so no second use is possible
     entry = GUEST_TOKENS.pop(token, None)
     if not entry or time.time() > entry["expires"]:
         return "Access Denied: This one-time guest link has already been used or expired.", 403

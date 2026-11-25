@@ -1,161 +1,407 @@
-<div align="center">
+# MyPrivateCloud
 
-# ☁️ MyPrivateCloud
-### *Your Personal, Self-Hosted, Quota-Enforced Cloud Engine on Windows + WSL2*
+### Personal Self-Hosted Cloud Storage | Windows + WSL2 | Docker | Jenkins CI/CD
 
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-Gunicorn-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-[![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?style=for-the-badge&logo=jenkins&logoColor=white)](https://jenkins.io)
-[![ngrok](https://img.shields.io/badge/ngrok-Static_Edge-1F1E37?style=for-the-badge&logo=ngrok&logoColor=white)](https://ngrok.com)
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Flask](https://img.shields.io/badge/Flask-Gunicorn-black)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue)
+![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-red)
+![ngrok](https://img.shields.io/badge/ngrok-Secure_Tunnel-purple)
 
-**"Why rent cloud space when your own machine can run a zero-downtime, CI/CD-backed private cloud accessible from anywhere in the world?"**
-
-</div>
+A personal self-hosted cloud storage platform built using Python, Flask, Docker, and Jenkins. It transforms local Windows storage into remotely accessible cloud storage with storage quotas, bandwidth tracking, authentication, file management, automated CI/CD deployment, and Android integration.
 
 ---
 
-## 🚀 Overview
+## Live Access
 
-**MyPrivateCloud** transforms a local Windows directory (`D:\MyPrivateCloud`) into a secure, globally reachable personal cloud storage platform—complete with a modern responsive web UI, real-time storage & bandwidth telemetry, dual authentication (Web Session + Mobile API Token), automated **Jenkins CI/CD** deployments, and one-tap **Android MacroDroid** integration.
-
-Instead of exposing router ports or paying for third-party subscriptions, everything runs inside isolated **Docker** containers on **WSL2**, tunneled securely over HTTPS via a static **ngrok** edge endpoint.
+| Resource | Link |
+|---|---|
+| Cloud Dashboard | [MyPrivateCloud](https://perch-condition-peso.ngrok-free.dev) |
+| GitHub Repository | [MyPrivateCloud](https://github.com/sanjay855/MyPrivateCloud) |
 
 ---
 
-## 🏗️ System Architecture
+## Overview
+
+MyPrivateCloud transforms a local Windows directory into a personal cloud storage platform accessible from anywhere through an HTTPS endpoint.
+
+The application runs inside Docker containers hosted on WSL2 (Ubuntu), while files are stored directly on the Windows filesystem. ngrok provides secure external connectivity, and Jenkins automates application builds and deployments through a CI/CD pipeline.
+
+The project combines cloud-style storage management, containerization, authentication, infrastructure automation, and mobile integration into a single self-hosted environment.
+
+---
+
+## System Architecture
 
 ```text
-+-----------------------+         HTTPS (Static URL)        +---------------------------+
-|   📱 Android / Web    | --------------------------------> |    🌐 ngrok Edge Tunnel   |
-|  (Chrome / MacroDroid)|                                   |   (Private Docker Net)    |
-+-----------------------+                                   +-------------+-------------+
-                                                                          |
-                                                                 Internal Port 5000
-                                                                          v
-+-----------------------+         Docker Volume Mount       +---------------------------+
-|  💾 Windows Storage   | <===============================> |   🐍 Flask + Gunicorn     |
-|  (D:\MyPrivateCloud)  |       & Monthly JSON Quota        |    (private-cloud-app)    |
-+-----------------------+                                   +-------------+-------------+
-                                                                          ^
-                                                            Zero-Downtime Rolling Rebuild
-                                                                          |
-+-----------------------+          Git Push / Poll          +---------------------------+
-|   🐙 GitHub Repo      | --------------------------------> |   ⚙️ Jenkins CI/CD        |
-|   (MyPrivateCloud)    |                                   |  (Syntax -> Build -> Up)  |
-+-----------------------+                                   +---------------------------+
++-------------------------+
+|     Android / Web      |
+|   Browser / MacroDroid |
++------------+------------+
+             |
+             | HTTPS
+             v
++-------------------------+
+|       ngrok Edge       |
+|    Secure Tunnel       |
++------------+------------+
+             |
+             | Docker Network
+             v
++-------------------------+
+|   Flask Application    |
+|   Gunicorn Server     |
+|   Docker Container    |
++------------+------------+
+             |
+             | Storage Mount
+             v
++-------------------------+
+|    Windows Storage     |
+|   D:\MyPrivateCloud   |
++-------------------------+
+
+
++-------------------------+
+|       GitHub            |
+|    Source Code          |
++------------+------------+
+             |
+             | Push / Poll
+             v
++-------------------------+
+|       Jenkins           |
+|     CI/CD Pipeline     |
++------------+------------+
+             |
+             v
++-------------------------+
+| Syntax Verification    |
+| Docker Image Build    |
+| Application Deploy     |
++-------------------------+
 ```
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-* **📊 Hard Quota & Bandwidth Guardrails:**
-  * **1.50 GB Storage Vault:** Real-time disk calculation blocks uploads before exceeding your allocated storage cap (`HTTP 413`).
-  * **600.0 MB Monthly Transfer Meter:** Tracks every upload, preview, and download in `meta/transfer.json`, automatically resetting on the 1st of every month (`HTTP 429` if exceeded).
-* **🔐 Dual-Layer Authentication (`@auth_required`):**
-  * **Web UI:** Session-backed login portal (`login.html`) protected by `APP_PASSWORD`.
-  * **Headless API:** Header-based `X-API-Token` authentication built specifically for automated mobile uploads without browser cookies.
-* **⚡ Zero-Downtime Jenkins CI/CD:**
-  * Every commit triggers a 3-stage pipeline: Python bytecode syntax verification (`py_compile`), Docker image build, and targeted container replacement (`docker compose up -d --no-deps --build cloud-app`)—keeping the **ngrok** tunnel alive throughout deployments.
-* **📱 Native Android Workflow (MacroDroid):**
-  * Launch the dashboard from a home-screen widget or share any photo/PDF straight from Android's **Share Sheet** into `D:\MyPrivateCloud` in the background.
+### Storage Management
+
+- 1.50 GB storage quota
+- Real-time storage usage calculation
+- Upload validation before saving files
+- Upload restrictions when storage capacity is reached
+- File upload, preview, download, and deletion
+- Storage space automatically freed after file deletion
+
+### Monthly Bandwidth Management
+
+- 600 MB monthly transfer quota
+- Tracks upload, preview, and download operations
+- Persistent transfer tracking using JSON metadata
+- Automatic monthly quota reset
+- Request restrictions when the transfer quota is exceeded
+
+### Authentication and Access Control
+
+- Password-protected web login
+- Session-based authentication for browser access
+- API token authentication for mobile automation
+- Authentication middleware protecting application endpoints
+
+### Automated CI/CD
+
+Jenkins automates application deployment through a pipeline consisting of:
+
+1. Python syntax verification
+2. Docker image build
+3. Application container deployment
+
+The pipeline uses targeted Docker Compose deployment to update the application container without intentionally restarting the ngrok tunnel.
+
+### Android Integration
+
+MacroDroid provides mobile integration with the cloud storage platform.
+
+- Open the cloud dashboard from Android
+- Upload files using the Android Share Sheet
+- Upload photos and documents
+- Send HTTP requests to the cloud API
+- Perform automated uploads without browser-based login
 
 ---
 
-## 🛠️ Tech Stack
+## Technology Stack
 
-| Layer | Technology | Role |
-| :--- | :--- | :--- |
-| **Backend & Server** | Python 3.11, Flask, Gunicorn | REST API, quota enforcement, file streaming, multi-worker WSGI serving |
-| **Frontend** | HTML5, Vanilla JS, CSS3 | Responsive dark-mode dashboard with live storage/transfer progress bars |
-| **Containerization** | Docker, Docker Compose | Isolated `cloud-net` bridge network, host volume mounts, auto-restart policies |
-| **Ingress Tunnel** | ngrok (`ngrok/ngrok:latest`) | Encrypted HTTPS public endpoint mapped internally to `cloud-app:5000` |
-| **CI/CD Automation** | Jenkins (`lts-jdk17`) | Automated syntax checks, image builds, and zero-downtime container rollouts |
-| **Mobile Client** | Android + MacroDroid | One-tap dashboard launcher & background `multipart/form-data` Share uploader |
+| Layer | Technology | Purpose |
+|---|---|---|
+| Backend | Python 3.11 | Application logic |
+| Web Framework | Flask | API and web application |
+| Application Server | Gunicorn | WSGI application serving |
+| Frontend | HTML5, CSS3, JavaScript | Responsive cloud dashboard |
+| Containerization | Docker | Application isolation |
+| Orchestration | Docker Compose | Container management |
+| CI/CD | Jenkins | Automated build and deployment |
+| Repository | GitHub | Source code management |
+| Secure Tunnel | ngrok | Public HTTPS access |
+| Mobile Automation | Android + MacroDroid | Mobile uploads and shortcuts |
+| Host Storage | Windows 11 | Persistent file storage |
+| Linux Environment | WSL2 + Ubuntu | Docker hosting environment |
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 ```text
-private-cloud/
-├── app.py                  # Core Flask application, quota logic, & auth middleware
-├── Dockerfile              # Lightweight Python 3.11-slim + Gunicorn production image
-├── docker-compose.yml      # Multi-container orchestration (cloud-app + ngrok)
-├── Jenkinsfile             # Declarative CI/CD pipeline (Verify -> Build -> Deploy)
+MyPrivateCloud/
+│
+├── app.py
+├── Dockerfile
+├── docker-compose.yml
+├── Jenkinsfile
+│
 ├── templates/
-│   ├── index.html          # Main cloud dashboard, live telemetry meters, & file manager
-│   └── login.html          # Password-protected authentication portal
-└── meta/                   # Persistent runtime storage for transfer.json (git-ignored)
+│   ├── index.html
+│   └── login.html
+│
+├── meta/
+│   └── transfer.json
+│
+└── README.md
 ```
+
+| File/Directory | Description |
+|---|---|
+| `app.py` | Flask application, authentication, API routes, storage management, and quota enforcement |
+| `Dockerfile` | Builds the Python application image using Gunicorn |
+| `docker-compose.yml` | Defines application services, networking, storage mounts, and container configuration |
+| `Jenkinsfile` | Defines the automated CI/CD pipeline |
+| `templates/index.html` | Main dashboard and file management interface |
+| `templates/login.html` | Login page |
+| `meta/` | Persistent metadata used for transfer tracking and quota management |
 
 ---
 
-## 🚦 Quick Start & Deployment
+## Infrastructure Design
 
-### 1. Prerequisites
-* Windows 11 with **WSL2 (Ubuntu)** and **Docker Engine / Compose v2**
-* A free **ngrok** account (Authtoken + Static Dev Domain)
-* A local storage directory on Windows (e.g., `D:\MyPrivateCloud` $\rightarrow$ `/mnt/d/MyPrivateCloud`)
+### Host Storage
 
-### 2. Configure Environment Variables
-Update `docker-compose.yml` (or inject via a `.env` file) with your credentials:
+Files are stored directly on the Windows filesystem.
 
-```yaml
-environment:
-  - APP_PASSWORD=YourStrongWebPassword
-  - API_TOKEN=YourMacroDroidSecretToken
-  - SECRET_KEY=YourRandomFlaskSessionKey
+```text
+D:\MyPrivateCloud
 ```
 
-### 3. Launch the Stack
+The directory is mounted into the Docker application container, allowing files to persist independently of the application container lifecycle.
+
+### Container Networking
+
+The application and ngrok services communicate through a dedicated Docker bridge network.
+
+- Flask listens internally on port `5000`.
+- The application port is not directly exposed to the host.
+- ngrok forwards incoming HTTPS traffic to the application container.
+- Internal service communication uses Docker networking.
+
+### Remote Access
+
+The cloud application is accessible through the ngrok HTTPS endpoint.
+
+[Open MyPrivateCloud](https://perch-condition-peso.ngrok-free.dev)
+
+---
+
+## Deployment
+
+### Prerequisites
+
+- Windows 11
+- WSL2
+- Ubuntu
+- Docker Engine
+- Docker Compose v2
+- Git
+- Jenkins
+- ngrok
+
+### Clone the Repository
+
 ```bash
 git clone https://github.com/sanjay855/MyPrivateCloud.git
 cd MyPrivateCloud
+```
+
+### Build and Start the Containers
+
+```bash
 docker compose up -d --build
 ```
 
-Verify both services are healthy:
+### Verify Container Status
+
 ```bash
 docker compose ps
 ```
 
----
+### View Application Logs
 
-## 🔌 API Reference (For Automation & Mobile Shortcuts)
+```bash
+docker compose logs -f cloud-app
+```
 
-All endpoints accept either an active browser session cookie **or** the `X-API-Token` request header.
+### Stop the Application
 
-| Method | Endpoint | Auth | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` / `POST` | `/login` | Public | Renders login UI or authenticates `password` form field |
-| `GET` | `/` | Required | Renders the main cloud storage dashboard |
-| `GET` | `/api/status` | Required | Returns JSON telemetry (`used_space`, `transfer_used`, `files[]`) |
-| `POST` | `/upload` | Required | Accepts `multipart/form-data` (`file`) if within 1.5 GB & 600 MB quotas |
-| `GET` | `/view/<filename>` | Required | Streams file inline in the browser (counts toward transfer quota) |
-| `GET` | `/download/<filename>` | Required | Forces file attachment download (counts toward transfer quota) |
-| `POST` | `/delete/<filename>` | Required | Removes file from disk and frees storage quota |
+```bash
+docker compose down
+```
 
 ---
 
-## 📱 Android MacroDroid Integration
+## CI/CD Pipeline
 
-Turn your phone into a native client in two minutes:
+The project uses Jenkins to automate application build and deployment.
 
-1. **Trigger:** *Receive Share* (All File Types)
-2. **Action:** *HTTP Request* $\rightarrow$ `POST https://<your-domain>.ngrok-free.dev/upload`
-3. **Headers:**
-   * `X-API-Token`: `<YourMacroDroidSecretToken>`
-   * `ngrok-skip-browser-warning`: `1`
-4. **Body:** *Multipart Form Data* $\rightarrow$ File parameter named `file` mapped to `{shared_file}`
+### Pipeline Workflow
+
+```text
+Developer Changes
+       |
+       v
+    Git Push
+       |
+       v
+ Jenkins Pipeline
+       |
+       v
+ Python Syntax Check
+       |
+       v
+ Docker Image Build
+       |
+       v
+ Targeted Deployment
+       |
+       v
+ Application Updated
+```
+
+### Pipeline Stages
+
+| Stage | Description |
+|---|---|
+| Verify | Checks Python source code syntax using `py_compile` |
+| Build | Builds the updated Docker image |
+| Deploy | Recreates the application service using Docker Compose |
+
+The deployment targets the cloud application container rather than the entire stack, helping keep the ngrok tunnel running during application updates.
 
 ---
 
-## 🔒 Security Best Practices
+## API Reference
 
-* **Never commit real tokens to public repositories:** Store `NGROK_AUTHTOKEN`, `APP_PASSWORD`, and `API_TOKEN` inside a local `.env` file (listed in `.gitignore`) or inject them via Jenkins Credentials.
-* **Internal Network Isolation:** `cloud-app` does not bind port `5000` to the host interface—traffic can only enter through the authenticated `ngrok` reverse proxy over `cloud-net`.
-* **Filename Sanitization:** Every upload, view, download, and delete request passes through `werkzeug.utils.secure_filename` to prevent directory traversal attacks.
+| Method | Endpoint | Authentication | Description |
+|---|---|---|---|
+| GET | `/login` | Public | Displays the login page |
+| POST | `/login` | Public | Authenticates the user |
+| GET | `/` | Required | Loads the cloud dashboard |
+| GET | `/api/status` | Required | Returns storage, transfer, and file information |
+| POST | `/upload` | Required | Uploads files subject to quota restrictions |
+| GET | `/view/<filename>` | Required | Displays supported files inline |
+| GET | `/download/<filename>` | Required | Downloads a file |
+| POST | `/delete/<filename>` | Required | Deletes a file and frees storage |
+
+Protected endpoints support authenticated browser sessions and authorized API requests.
 
 ---
+
+## Android MacroDroid Integration
+
+MacroDroid connects Android file-sharing workflows to the cloud application.
+
+### Upload Workflow
+
+1. Share a file from an Android application.
+2. MacroDroid receives the shared file.
+3. MacroDroid sends an HTTP POST request to the cloud upload endpoint.
+4. The request includes the file as multipart form data.
+5. Flask validates authentication and storage limits.
+6. The file is saved to the Windows storage directory.
+
+### Upload Endpoint
+
+```http
+POST https://perch-condition-peso.ngrok-free.dev/upload
+```
+
+### Request Format
+
+```text
+Content-Type: multipart/form-data
+
+file: Shared file
+```
+
+The mobile workflow uses API authentication configured privately in MacroDroid.
+
+---
+
+## Security Considerations
+
+- Authentication is required for protected cloud operations.
+- API access uses a separate authentication mechanism for mobile automation.
+- The Flask application is not directly exposed through a host port.
+- Public access is routed through the HTTPS ngrok tunnel.
+- Filenames are sanitized using Werkzeug's `secure_filename`.
+- Upload requests are validated against storage and bandwidth limits.
+- Sensitive configuration values are kept outside the source repository.
+- Persistent files and quota metadata are stored outside the application container.
+
+---
+
+## Project Goals
+
+This project was built to gain practical experience with:
+
+- Self-hosted cloud infrastructure
+- Linux environments using WSL2
+- Docker containerization
+- Docker Compose orchestration
+- Flask application deployment
+- CI/CD pipeline implementation using Jenkins
+- Secure remote access using ngrok
+- API authentication and access control
+- Storage and bandwidth quota management
+- Android automation and HTTP integration
+- Persistent storage and container lifecycle management
+
+---
+
+## Future Improvements
+
+- File encryption at rest
+- Automated backups
+- Improved audit logging
+- Advanced file search and filtering
+- User-based storage quotas
+- Monitoring and alerting
+- Enhanced security controls
+- Container health checks
+- Deployment monitoring
+
+---
+
+## Author
+
+**Sanjay**
+
+Cloud Infrastructure | DevOps | Docker | Jenkins | Azure | Linux
+
+GitHub: [sanjay855](https://github.com/sanjay855)
+
+---
+
+## AI-Assisted Development
+
+AI tools were used during the development of MyPrivateCloud to assist with implementation, troubleshooting, planning, and improving the overall development workflow.
+*MyPrivateCloud is a personal self-hosted cloud infrastructure project built for learning, experimentation, automation, and practical cloud engineering experience.*

@@ -33,7 +33,30 @@
         Sign in
       </button>
     </form>
+	<hr style="margin: 1.5rem 0; border-color: #334155;">
+<div style="text-align: left;">
+  <label style="font-size: 0.85rem; color: #94a3b8;">Friend / Recruiter Preview?</label>
+  <div style="display: flex; gap: 8px; margin-top: 6px;">
+    <input type="text" id="guestName" placeholder="Enter your name" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff;">
+    <button type="button" onclick="requestGuestAccess()" style="padding: 8px 12px; border-radius: 6px; background: #0ea5e9; color: #fff; border: none; cursor: pointer;">Request Link</button>
+  </div>
+  <p id="guestStatus" style="font-size: 0.8rem; color: #38bdf8; margin-top: 6px;"></p>
+</div>
 
+<script>
+async function requestGuestAccess() {
+  const name = document.getElementById("guestName").value.trim();
+  const statusEl = document.getElementById("guestStatus");
+  if (!name) { statusEl.textContent = "Please enter your name first."; return; }
+  const res = await fetch("/request-guest", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  const data = await res.json();
+  statusEl.textContent = data.message || data.error;
+}
+</script>
     <p style="margin:20px 0 0;font-size:12.5px;line-height:1.5;color:#5B6B77;text-align:center;">
       Only people with the password can view, upload or download files.
     </p>

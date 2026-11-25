@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import secrets
 from datetime import datetime
 from functools import wraps
 from flask import (
@@ -19,6 +21,10 @@ MAX_TRANSFER_BYTES = 600 * 1024 * 1024             # 600 MB
 
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "MyCloudPass123")
 API_TOKEN = os.environ.get("API_TOKEN", "macrodroid-secret-token")
+
+# In-memory approval queue and single-use tokens
+PENDING_REQUESTS = {}  # {req_id: {"name": str, "time": str, "created": float}}
+GUEST_TOKENS = {}      # {token: {"name": str, "expires": float}}
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(META_FILE), exist_ok=True)
@@ -70,21 +76,29 @@ def add_transfer_bytes(delta):
     save_transfer_bytes(current + delta)
 
 
-def auth_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if session.get("logged_in") or request.headers.get("X-API-Token") == API_TOKEN:
-            return f(*args, **kwargs)
-        if request.path.startswith("/api/"):
-            return jsonify({"error": "Unauthorized"}), 401
-        return redirect(url_for("login"))
-    return decorated
+def auth_required(allow_guest=False):
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            is_owner = session.get("logged_in") or request.headers.get("X-API-Token") == API_TOKEN
+            is_guest = allow_guest and session.get("guest_mode")
+
+            if is_owner or is_guest:
+                return f(*args, **kwargs)
+            if session.get("guest_mode") and not allow_guest:
+                return jsonify({"error": "Read-only guest preview: actions disabled."}), 403
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Unauthorized"}), 401
+            return redirect(url_for("login"))
+        return decorated
+    return decorator
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         if request.form.get("password") == APP_PASSWORD:
+            session.clear()
             session["logged_in"] = True
             return redirect(url_for("index"))
         return redirect(url_for("login", error=1))
@@ -97,14 +111,80 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/request-guest", methods=["POST"])
+def request_guest():
+    data = request.get_json(silent=True) or request.form
+    guest_name = (data.get("name") or "").strip()[:40]
+    if not guest_name:
+        return jsonify({"error": "Please enter your name."}), 400
+
+    # Clean old requests (> 30 mins) and cap queue at 10
+    now = time.time()
+    for k in [k for k, v in PENDING_REQUESTS.items() if now - v["created"] > 1800]:
+        PENDING_REQUESTS.pop(k, None)
+    if len(PENDING_REQUESTS) >= 10:
+        return jsonify({"error": "Approval queue is full. Try again later."}), 429
+
+    req_id = secrets.token_hex(4)
+    PENDING_REQUESTS[req_id] = {
+        "name": guest_name,
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "created": now
+    }
+    return jsonify({"status": "requested", "message": "Request sent! Ask Sanjay to approve it."}), 201
+
+
+@app.route("/api/guest-requests")
+@auth_required(allow_guest=False)
+def list_guest_requests():
+    items = [{"id": k, "name": v["name"], "time": v["time"]} for k, v in PENDING_REQUESTS.items()]
+    return jsonify({"requests": items})
+
+
+@app.route("/approve-guest/<req_id>", methods=["POST"])
+@auth_required(allow_guest=False)
+def approve_guest(req_id):
+    req = PENDING_REQUESTS.pop(req_id, None)
+    if not req:
+        return jsonify({"error": "Request not found or already handled."}), 404
+
+    token = secrets.token_urlsafe(16)
+    GUEST_TOKENS[token] = {
+        "name": req["name"],
+        "expires": time.time() + 600  # 10-minute window to open once
+    }
+    link = f"https://perch-condition-peso.ngrok-free.dev/guest/{token}"
+    return jsonify({"status": "approved", "guest_name": req["name"], "one_time_link": link})
+
+
+@app.route("/deny-guest/<req_id>", methods=["POST"])
+@auth_required(allow_guest=False)
+def deny_guest(req_id):
+    PENDING_REQUESTS.pop(req_id, None)
+    return jsonify({"status": "denied"})
+
+
+@app.route("/guest/<token>")
+def guest_login(token):
+    # Immediately burn the token on first click so no second use is ever possible
+    entry = GUEST_TOKENS.pop(token, None)
+    if not entry or time.time() > entry["expires"]:
+        return "Access Denied: This one-time guest link has already been used or expired.", 403
+
+    session.clear()
+    session["guest_mode"] = True
+    session["guest_name"] = entry["name"]
+    return redirect(url_for("index"))
+
+
 @app.route("/")
-@auth_required
+@auth_required(allow_guest=True)
 def index():
-    return render_template("index.html")
+    return render_template("index.html", is_guest=bool(session.get("guest_mode")), guest_name=session.get("guest_name", ""))
 
 
 @app.route("/api/status")
-@auth_required
+@auth_required(allow_guest=True)
 def api_status():
     used_storage = get_storage_used()
     avail_storage = max(0, MAX_STORAGE_BYTES - used_storage)
@@ -133,12 +213,13 @@ def api_status():
         "transfer_used": format_bytes(used_transfer),
         "transfer_limit": "600.0 MB",
         "transfer_percent": transfer_pct,
-        "files": files_list
+        "files": files_list,
+        "is_guest": bool(session.get("guest_mode"))
     })
 
 
 @app.route("/upload", methods=["POST"])
-@auth_required
+@auth_required(allow_guest=False)
 def upload():
     if "file" not in request.files:
         return jsonify({"error": "No file selected."}), 400
@@ -164,7 +245,7 @@ def upload():
 
 
 @app.route("/view/<filename>")
-@auth_required
+@auth_required(allow_guest=False)
 def view_file(filename):
     safe_name = secure_filename(filename)
     fp = os.path.join(STORAGE_DIR, safe_name)
@@ -178,7 +259,7 @@ def view_file(filename):
 
 
 @app.route("/download/<filename>")
-@auth_required
+@auth_required(allow_guest=False)
 def download_file(filename):
     safe_name = secure_filename(filename)
     fp = os.path.join(STORAGE_DIR, safe_name)
@@ -192,7 +273,7 @@ def download_file(filename):
 
 
 @app.route("/delete/<filename>", methods=["POST"])
-@auth_required
+@auth_required(allow_guest=False)
 def delete_file(filename):
     safe_name = secure_filename(filename)
     fp = os.path.join(STORAGE_DIR, safe_name)

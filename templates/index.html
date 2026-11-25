@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Private Cloud</title>
+</head>
+<body style="margin:0;background:#EAEFF2;color:#14212B;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+<div style="max-width:1000px;margin:0 auto;padding:16px;box-sizing:border-box;">
+
+  <!-- Header -->
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 20px;">
+    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+      <div style="width:42px;height:42px;flex:none;border-radius:12px;background:#0F6E7A;display:flex;align-items:flex-end;justify-content:center;padding:8px;box-sizing:border-box;">
+        <div style="width:100%;height:55%;background:#9FE3EA;border-radius:4px 4px 6px 6px;"></div>
+      </div>
+      <div style="min-width:0;">
+        <h1 style="margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em;">Private Cloud</h1>
+        <div style="font-size:13px;color:#5B6B77;">Signed in</div>
+      </div>
+    </div>
+    <a href="/logout" style="flex:none;text-decoration:none;font-size:14px;font-weight:600;color:#14212B;background:#FFFFFF;border:1.5px solid #C9D3DA;border-radius:10px;padding:9px 16px;">Log out</a>
+  </header>
+
+  <!-- Storage + transfer meters -->
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;">
+
+    <!-- The tank -->
+    <div style="background:#FFFFFF;border-radius:18px;padding:20px;box-shadow:0 1px 2px rgba(20,33,43,.06),0 8px 24px rgba(20,33,43,.05);">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+        <h2 style="margin:0;font-size:16px;font-weight:700;">Storage</h2>
+        <span id="spacePct" style="font-size:14px;font-weight:600;color:#5B6B77;">0% full</span>
+      </div>
+      <div style="margin:14px 0 18px;height:16px;background:#E3EAEE;border-radius:999px;overflow:hidden;">
+        <div id="spaceBar" style="height:100%;width:0%;background:#0F6E7A;border-radius:999px;"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px 24px;">
+        <div style="flex:1 1 80px;"><div style="font-size:13px;color:#5B6B77;">Available</div><div id="availableSpace" style="font-size:22px;font-weight:700;margin-top:2px;">–</div></div>
+        <div style="flex:1 1 80px;"><div style="font-size:13px;color:#5B6B77;">Used</div><div id="usedSpace" style="font-size:22px;font-weight:700;margin-top:2px;">–</div></div>
+        <div style="flex:1 1 80px;"><div style="font-size:13px;color:#5B6B77;">Total</div><div id="totalSpace" style="font-size:22px;font-weight:700;margin-top:2px;">–</div></div>
+      </div>
+    </div>
+
+    <!-- The meter -->
+    <div style="background:#FFFFFF;border-radius:18px;padding:20px;box-shadow:0 1px 2px rgba(20,33,43,.06),0 8px 24px rgba(20,33,43,.05);">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+        <h2 style="margin:0;font-size:16px;font-weight:700;">Monthly transfer</h2>
+        <span id="transferPct" style="font-size:14px;font-weight:600;color:#5B6B77;">0% used</span>
+      </div>
+      <div style="margin:14px 0 18px;height:16px;background:#E3EAEE;border-radius:999px;overflow:hidden;">
+        <div id="transferBar" style="height:100%;width:0%;background:#0F6E7A;border-radius:999px;"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px 24px;">
+        <div style="flex:1 1 80px;"><div style="font-size:13px;color:#5B6B77;">Used this month</div><div id="transferUsed" style="font-size:22px;font-weight:700;margin-top:2px;">–</div></div>
+        <div style="flex:1 1 80px;"><div style="font-size:13px;color:#5B6B77;">Monthly limit</div><div id="transferLimit" style="font-size:22px;font-weight:700;margin-top:2px;">–</div></div>
+      </div>
+      <p style="margin:14px 0 0;font-size:12.5px;line-height:1.5;color:#5B6B77;">Uploads and downloads both count. The meter resets on the 1st of each month.</p>
+    </div>
+  </section>
+
+  <!-- Upload -->
+  <section style="margin-top:16px;background:#FFFFFF;border-radius:18px;padding:20px;box-shadow:0 1px 2px rgba(20,33,43,.06),0 8px 24px rgba(20,33,43,.05);">
+    <h2 style="margin:0 0 12px;font-size:16px;font-weight:700;">Upload files</h2>
+    <label for="fileInput" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:28px 16px;border:2px dashed #9DB4BF;border-radius:14px;background:#F4F8F9;cursor:pointer;">
+      <span style="font-size:15px;font-weight:600;color:#0F6E7A;">Choose files to upload</span>
+      <span style="font-size:13px;color:#5B6B77;">From this device. Blocked if it exceeds your free space or monthly transfer limit.</span>
+    </label>
+    <input id="fileInput" type="file" multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;">
+    <div id="uploadProgressWrap" style="display:none;margin-top:14px;">
+      <div id="uploadLabel" style="font-size:13px;color:#5B6B77;margin-bottom:6px;word-break:break-all;"></div>
+      <div style="height:10px;background:#E3EAEE;border-radius:999px;overflow:hidden;"><div id="uploadBar" style="height:100%;width:0%;background:#0F6E7A;border-radius:999px;"></div></div>
+    </div>
+    <div id="message" role="status" style="display:none;margin-top:14px;padding:11px 14px;border-radius:10px;font-size:14px;line-height:1.45;"></div>
+  </section>
+
+  <!-- Files -->
+  <section style="margin-top:16px;margin-bottom:32px;background:#FFFFFF;border-radius:18px;padding:20px;box-shadow:0 1px 2px rgba(20,33,43,.06),0 8px 24px rgba(20,33,43,.05);">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
+      <h2 style="margin:0;font-size:16px;font-weight:700;">Files <span id="fileCount" style="font-weight:500;color:#5B6B77;"></span></h2>
+      <input id="search" type="search" placeholder="Search files" aria-label="Search files"
+        style="flex:1 1 200px;max-width:100%;box-sizing:border-box;padding:10px 14px;font-size:15px;border:1.5px solid #C9D3DA;border-radius:10px;background:#F7F9FA;color:#14212B;">
+    </div>
+    <div id="fileList"></div>
+  </section>
+</div>
+
+<script>
+/* ---------- Data ----------
+   Expects GET /api/status to return:
+   { total_space, used_space, available_space, space_percent,
+     transfer_used, transfer_limit, transfer_percent,
+     files: [{ name, size, modified }] }
+   If the endpoint is not reachable (e.g. opening this file directly), sample data is shown. */
+var DEMO = {
+  total_space: '1.50 GB', used_space: '412.6 MB', available_space: '1.10 GB', space_percent: 27,
+  transfer_used: '188.0 MB', transfer_limit: '600 MB', transfer_percent: 31,
+  files: [
+    { name: 'passport-scan.pdf', size: '2.4 MB', modified: '2026-11-20 09:14' },
+    { name: 'holiday-photo.jpg', size: '4.8 MB', modified: '2026-11-18 18:02' },
+    { name: 'notes.txt', size: '450 KB', modified: '2026-11-12 22:41' },
+    { name: 'project-backup.zip', size: '212.3 MB', modified: '2026-11-03 07:30' }
+  ]
+};
+var state = { files: [] };
+var demoMode = false;
+
+/* ---------- Helpers ---------- */
+function $(id) { return document.getElementById(id); }
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function barColor(p) { return p >= 90 ? '#C62828' : (p >= 70 ? '#D98200' : '#0F6E7A'); }
+function ext(name) { var i = name.lastIndexOf('.'); return i > -1 ? name.slice(i + 1, i + 5).toUpperCase() : 'FILE'; }
+
+function showMessage(text, kind) {
+  var m = $('message');
+  var ok = kind === 'ok';
+  m.style.display = 'block';
+  m.style.background = ok ? '#E3F4EA' : '#FCEBEA';
+  m.style.color = ok ? '#14532D' : '#9B1C14';
+  m.textContent = text;
+}
+
+/* ---------- Render ---------- */
+function renderStatus(d) {
+  $('totalSpace').textContent = d.total_space;
+  $('usedSpace').textContent = d.used_space;
+  $('availableSpace').textContent = d.available_space;
+  $('spacePct').textContent = Math.round(d.space_percent) + '% full';
+  $('spaceBar').style.width = Math.min(100, d.space_percent) + '%';
+  $('spaceBar').style.background = barColor(d.space_percent);
+
+  $('transferUsed').textContent = d.transfer_used;
+  $('transferLimit').textContent = d.transfer_limit;
+  $('transferPct').textContent = Math.round(d.transfer_percent) + '% used';
+  $('transferBar').style.width = Math.min(100, d.transfer_percent) + '%';
+  $('transferBar').style.background = barColor(d.transfer_percent);
+
+  state.files = d.files || [];
+  renderFiles();
+}
+
+function renderFiles() {
+  var q = $('search').value.trim().toLowerCase();
+  var list = state.files.filter(function (f) { return f.name.toLowerCase().indexOf(q) !== -1; });
+  $('fileCount').textContent = '(' + list.length + (q ? ' of ' + state.files.length : '') + ')';
+
+  if (!list.length) {
+    $('fileList').innerHTML = '<div style="padding:28px 8px;text-align:center;color:#5B6B77;font-size:15px;">' +
+      (state.files.length ? 'No files match your search.' : 'No files yet. Upload your first file above.') + '</div>';
+    return;
+  }
+
+  var btn = 'display:inline-block;text-decoration:none;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:9px;border:1.5px solid #C9D3DA;background:#FFFFFF;color:#14212B;cursor:pointer;font-family:inherit;';
+  var html = '';
+  list.forEach(function (f, i) {
+    var n = encodeURIComponent(f.name);
+    html += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 0;' + (i ? 'border-top:1px solid #E3EAEE;' : '') + '">' +
+      '<div style="flex:none;width:44px;height:44px;border-radius:10px;background:#E3F1F3;color:#0F6E7A;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + esc(ext(f.name)) + '</div>' +
+      '<div style="flex:1 1 180px;min-width:0;">' +
+        '<div style="font-size:15px;font-weight:600;word-break:break-word;">' + esc(f.name) + '</div>' +
+        '<div style="font-size:13px;color:#5B6B77;margin-top:2px;">' + esc(f.size) + ' &nbsp;|&nbsp; ' + esc(f.modified) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+        '<a href="/view/' + n + '" target="_blank" rel="noopener" style="' + btn + '">View</a>' +
+        '<a href="/download/' + n + '" style="' + btn + '">Download</a>' +
+        '<button type="button" data-delete="' + esc(f.name) + '" style="' + btn + 'color:#B3261E;border-color:#EBC4C1;">Delete</button>' +
+      '</div></div>';
+  });
+  $('fileList').innerHTML = html;
+}
+
+/* ---------- Load ---------- */
+function load() {
+  return fetch('/api/status', { credentials: 'same-origin' })
+    .then(function (r) {
+      if (r.status === 401 || r.redirected) { location.href = '/login'; return null; }
+      if (!r.ok) throw new Error('status');
+      return r.json();
+    })
+    .then(function (d) { if (d) { demoMode = false; renderStatus(d); } })
+    .catch(function () { demoMode = true; renderStatus(DEMO); });
+}
+
+/* ---------- Upload ---------- */
+function uploadOne(file) {
+  return new Promise(function (resolve) {
+    var fd = new FormData();
+    fd.append('file', file);
+    var x = new XMLHttpRequest();
+    x.open('POST', '/upload');
+    x.upload.onprogress = function (e) {
+      if (e.lengthComputable) $('uploadBar').style.width = (e.loaded / e.total * 100) + '%';
+    };
+    x.onload = function () {
+      var msg = '';
+      try { var j = JSON.parse(x.responseText); msg = j.error || j.message || ''; } catch (e) {}
+      resolve({ ok: x.status >= 200 && x.status < 300, msg: msg });
+    };
+    x.onerror = function () { resolve({ ok: false, msg: 'Could not reach the server.' }); };
+    x.send(fd);
+  });
+}
+
+$('fileInput').addEventListener('change', function (e) {
+  var files = Array.prototype.slice.call(e.target.files);
+  if (!files.length) return;
+  if (demoMode) { showMessage('Preview mode: uploads work once this page is served by Flask.', 'err'); e.target.value = ''; return; }
+  $('message').style.display = 'none';
+  $('uploadProgressWrap').style.display = 'block';
+  var done = 0, failed = [];
+  (function next() {
+    if (done === files.length) {
+      $('uploadProgressWrap').style.display = 'none';
+      $('uploadBar').style.width = '0%';
+      e.target.value = '';
+      if (failed.length) showMessage(failed.join(' '), 'err');
+      else showMessage(files.length + (files.length > 1 ? ' files uploaded.' : ' file uploaded.'), 'ok');
+      load();
+      return;
+    }
+    var f = files[done];
+    $('uploadLabel').textContent = 'Uploading ' + f.name + ' (' + (done + 1) + ' of ' + files.length + ')';
+    $('uploadBar').style.width = '0%';
+    uploadOne(f).then(function (res) {
+      if (!res.ok) failed.push(f.name + ' was not uploaded. ' + (res.msg || 'Check your free space and monthly transfer limit.'));
+      done++; next();
+    });
+  })();
+});
+
+/* ---------- Delete ---------- */
+$('fileList').addEventListener('click', function (e) {
+  var b = e.target.closest('button[data-delete]');
+  if (!b) return;
+  var name = b.getAttribute('data-delete');
+  if (!confirm('Delete "' + name + '" permanently? This frees up space but cannot be undone.')) return;
+  if (demoMode) { showMessage('Preview mode: deleting works once this page is served by Flask.', 'err'); return; }
+  fetch('/delete/' + encodeURIComponent(name), { method: 'POST', credentials: 'same-origin' })
+    .then(function (r) {
+      if (!r.ok) throw new Error();
+      showMessage(name + ' deleted.', 'ok');
+      load();
+    })
+    .catch(function () { showMessage(name + ' could not be deleted.', 'err'); });
+});
+
+$('search').addEventListener('input', renderFiles);
+load();
+</script>
+</body>
+</html>

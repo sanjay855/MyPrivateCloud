@@ -1,0 +1,31 @@
+services:
+  cloud-app:
+    build: .
+    image: private-cloud-app:latest
+    container_name: private-cloud-app
+    restart: unless-stopped
+    environment:
+      - APP_PASSWORD=SanjuCloud2026
+      - API_TOKEN=SanjuMacroToken2026
+      - SECRET_KEY=RandomLongSessionKey998877
+    volumes:
+      - /mnt/d/MyPrivateCloud:/app/storage
+      - ./meta:/app/meta
+    networks:
+      - cloud-net
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: private-cloud-ngrok
+    restart: unless-stopped
+    command: http cloud-app:5000 --url=https://perch-condition-peso.ngrok-free.dev
+    environment:
+      - NGROK_AUTHTOKEN=3MajxTCIiEvADLdY0z1lpMEtAY7_6aDSaNubV5umbvXHjXPKV
+    depends_on:
+      - cloud-app
+    networks:
+      - cloud-net
+
+networks:
+  cloud-net:
+    driver: bridge

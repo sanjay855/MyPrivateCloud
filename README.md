@@ -159,7 +159,3 @@ Turn your phone into a native client in two minutes:
 * **Filename Sanitization:** Every upload, view, download, and delete request passes through `werkzeug.utils.secure_filename` to prevent directory traversal attacks.
 
 ---
-
-<div align="center">
-  <sub>Built with ☕, Docker, and automation by <b>Sanjay</b></sub>
-</div>

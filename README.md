@@ -428,3 +428,42 @@ Added an interactive **Request-and-Approve Guest Preview** workflow so friends o
 | `POST` | `/approve-guest/<req_id>` | Owner Session | Approves a pending request and generates a 10-minute single-use token |
 | `POST` | `/deny-guest/<req_id>` | Owner Session | Declines and removes a pending visitor request |
 | `GET` | `/guest/<token>` | Single-Use Token | Burns the token on first click and starts a read-only guest session |
+
+---
+
+## 🆕 Third Update: Multi-User Architecture, TOTP 2FA & Admin Oversight
+
+Upgraded **MyPrivateCloud** from a single-user tool into a multi-user cloud platform backed by SQLite, Authenticator-based two-factor authentication (TOTP), per-user storage quotas, and role-based folder isolation, while retiring the temporary guest preview system.
+
+### Key Architectural Upgrades
+1. **SQLite User Database (`meta/cloud.db`):** Stores `username`, `email`, salted password hashes (`werkzeug.security`), `totp_secret`, `is_approved`, `is_admin`, and `created_at` timestamps on persistent storage.
+2. **First-Boot Custom Admin Initialization:** When no administrator exists in `cloud.db`, `https://perch-condition-peso.ngrok-free.dev/login` presents a one-time setup form for the administrator to choose their own credentials and scan their Authenticator QR code. Once created, the setup view disappears permanently.
+3. **Registration Approval & Authenticator App 2FA (`pyotp` + `qrcode`):**
+   * New registrations create `/app/storage/users/<username>/`, generate a QR code and manual secret key for Google/Microsoft Authenticator, and remain locked (`is_approved = 0`) until approved by the administrator.
+   * All sign-ins verify the hashed password alongside a rotating 6-digit TOTP code.
+4. **Folder Isolation, Shared Public Space & Combined 30 MB Quotas:**
+   * **Private User Folder (`scope=private`):** Strictly isolated per user via path-traversal validation; regular users have a **30.0 MB** combined quota covering both their private directory and their uploads to the public folder.
+   * **Public Shared Folder (`scope=public`):** Accessible to all approved users for viewing, uploading, and downloading, with file deletion restricted exclusively to the administrator.
+   * **Admin Folder Explorer (`scope=user:<username>` & `scope=archive`):** Allows the administrator to inspect, manage, and audit any user's private folder or archived directories across the **1.50 GB** drive.
+5. **User Lifecycle & 2FA Recovery (`User Management` Tab):**
+   * **Approve / Revoke Access:** Toggles user login eligibility in real time.
+   * **Reset 2FA:** Generates a fresh TOTP secret and QR code modal if a user loses access to their Authenticator app.
+   * **Delete & Archive:** Removes the user's database login while preserving their private files inside `/app/storage/archive/<username>_<timestamp>/`.
+6. **MacroDroid API Compatibility:** Preserves `X-API-Token` header authentication for direct Android Share-Sheet uploads into the administrator's private directory.
+
+### Current API Endpoints
+
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `GET`, `POST` | `/login` | Public | Authenticates username/email, hashed password, and 6-digit TOTP code |
+| `POST` | `/register` | Public | Creates first-boot admin or pending user account, private folder, and TOTP QR code |
+| `GET` | `/logout` | Session | Clears the active user session |
+| `GET` | `/api/status?scope=<scope>` | Approved User / API Token | Returns storage quota, monthly bandwidth usage, and scoped file listings |
+| `POST` | `/upload?scope=<scope>` | Approved User / API Token | Uploads files while enforcing 1.50 GB drive, 30.0 MB user, and 600.0 MB bandwidth limits |
+| `GET` | `/view/<filename>?scope=<scope>` | Approved User | Previews a file inline in the browser and logs transfer bandwidth |
+| `GET` | `/download/<filename>?scope=<scope>` | Approved User | Downloads a file as an attachment and logs transfer bandwidth |
+| `POST` | `/delete/<filename>?scope=<scope>` | Approved User (Admin for `public`) | Deletes a file within the permitted folder scope |
+| `GET` | `/api/admin/users` | Admin | Lists all registered accounts, registration dates, combined storage used, and approval status |
+| `POST` | `/api/admin/users/<id>/toggle` | Admin | Approves or revokes login access for a user |
+| `POST` | `/api/admin/users/<id>/reset-2fa` | Admin | Generates a new TOTP secret and QR code for a user |
+| `POST` | `/api/admin/users/<id>/delete` | Admin | Deletes the user account and moves their private folder to `/app/storage/archive/` |

@@ -69,7 +69,6 @@
   <div class="card">
 
     {% if not admin_exists %}
-    <!-- First-time setup (automatically disappears once Admin is created) -->
     <section data-view="setup">
       <h2>First-Time Setup: Create Admin Account</h2>
       <p class="lead">No accounts exist yet. The first account you register becomes the system administrator.</p>
@@ -84,7 +83,6 @@
 
     {% else %}
 
-    <!-- Home: choose an action -->
     <section data-view="home">
       <h2>Welcome</h2>
       <p class="lead">Sign in to open your files, or create an account to get started.</p>
@@ -94,7 +92,6 @@
       </div>
     </section>
 
-    <!-- Sign in -->
     <section data-view="login" hidden>
       <button type="button" class="back" data-go="home">Back</button>
       <h2>Sign In</h2>
@@ -108,7 +105,6 @@
       </form>
     </section>
 
-    <!-- Register -->
     <section data-view="register" hidden>
       <button type="button" class="back" data-go="home">Back</button>
       <h2>Create Account</h2>
@@ -125,7 +121,6 @@
     {% endif %}
 
     {% if qr_uri and totp_secret %}
-    <!-- 2FA setup -->
     <section data-view="twofa" hidden>
       <h2>Set up your Authenticator app</h2>
       <p class="lead">Scan this code in Google Authenticator or Microsoft Authenticator before you sign in.</p>

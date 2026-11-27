@@ -2,10 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir flask gunicorn
+RUN pip install --no-cache-dir flask gunicorn werkzeug pyotp qrcode[pil]
 
 COPY app.py .
-COPY templates ./templates
+COPY templates/ ./templates/
+
+RUN mkdir -p /app/storage /app/meta
 
 EXPOSE 5000
 

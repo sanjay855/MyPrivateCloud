@@ -3,123 +3,173 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in · Private Cloud</title>
+<title>MyPrivateCloud · Welcome</title>
+<style>
+  :root {
+    --ink: #1F1722; --muted: #6E6275; --line: #E6DCE4; --surface: #FFFFFF; --field: #FBF8FA;
+    --accent: #D6336C; --accent2: #7C3AED; --accent-ink: #FFFFFF; --accent-soft: #FBE3EC;
+    --err-bg: #FDE9E9; --err-ink: #B42318; --ok-bg: #E0F4EA; --ok-ink: #11663F;
+    --warn-bg: #FFF0D6; --warn-ink: #9A5B00;
+    --page: linear-gradient(135deg, #FFD9E6 0%, #E6D9FF 100%);
+    --shadow: 0 20px 50px rgba(88, 28, 135, .16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #F6EEF7; --muted: #B3A5B8; --line: #35283B; --surface: #1F1724; --field: #170F1B;
+      --accent: #FF6B9C; --accent2: #A78BFA; --accent-ink: #1A0E15; --accent-soft: #3A1A2A;
+      --err-bg: #3D1717; --err-ink: #FFB4AB; --ok-bg: #12301F; --ok-ink: #9BEBBB;
+      --warn-bg: #3A2B0E; --warn-ink: #F7C770;
+      --page: linear-gradient(135deg, #2B1231 0%, #171232 100%);
+      --shadow: 0 20px 50px rgba(0, 0, 0, .5);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+    background: var(--page); background-attachment: fixed; color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  [hidden] { display: none !important; }
+  .wrap { width: 100%; max-width: 420px; }
+  .brand { text-align: center; margin-bottom: 22px; }
+  .logo { width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 16px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: flex-end; justify-content: center; padding: 12px; box-shadow: 0 8px 20px rgba(214, 51, 108, .35); }
+  .logo i { display: block; width: 100%; height: 55%; background: #fff; opacity: .92; border-radius: 4px 4px 7px 7px; }
+  .brand h1 { margin: 0; font-size: 26px; letter-spacing: -.02em; }
+  .brand p { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+  .card { background: var(--surface); border-radius: 24px; padding: 28px 24px; box-shadow: var(--shadow); }
+  h2 { margin: 0 0 6px; font-size: 20px; letter-spacing: -.01em; }
+  .lead { margin: 0 0 20px; font-size: 14px; line-height: 1.55; color: var(--muted); }
+  .stack { display: grid; gap: 12px; }
+  input { width: 100%; min-height: 52px; padding: 12px 16px; font: inherit; font-size: 16px; color: var(--ink); background: var(--field); border: 1.5px solid var(--line); border-radius: 14px; }
+  input:focus { outline: 3px solid var(--accent-soft); border-color: var(--accent); }
+  .btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; padding: 0 20px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { border: 0; color: var(--accent-ink); background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.small { width: auto; min-height: 44px; font-size: 14px; padding: 0 16px; }
+  .back { width: auto; min-height: 40px; margin: 0 0 14px -8px; padding: 0 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .back:hover { color: var(--accent); }
+  .alert { padding: 12px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; margin-bottom: 16px; }
+  .alert.err { background: var(--err-bg); color: var(--err-ink); }
+  .alert.ok { background: var(--ok-bg); color: var(--ok-ink); }
+  .alert.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .qr { display: block; width: 190px; max-width: 70%; height: auto; margin: 0 auto 16px; background: #fff; padding: 10px; border-radius: 16px; border: 1px solid var(--line); }
+  .secret { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .secret code { flex: 1 1 180px; min-width: 0; display: flex; align-items: center; padding: 12px 14px; background: var(--field); border: 1.5px dashed var(--line); border-radius: 12px; font-size: 15px; letter-spacing: .08em; word-break: break-all; }
+  .foot { margin: 18px 0 0; text-align: center; font-size: 12.5px; color: var(--muted); }
+</style>
 </head>
-<body style="margin:0;min-height:100vh;background:#EAEFF2;color:#14212B;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
+<body data-view="{% if qr_uri and totp_secret %}twofa{% elif not admin_exists %}setup{% elif reg_error or reg_success %}register{% elif error %}login{% else %}home{% endif %}">
+<main class="wrap">
 
-  <main style="width:100%;max-width:380px;background:#FFFFFF;border-radius:20px;padding:32px 28px;box-sizing:border-box;box-shadow:0 1px 2px rgba(20,33,43,.06),0 12px 32px rgba(20,33,43,.08);">
-
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
-      <div style="width:44px;height:44px;border-radius:12px;background:#0F6E7A;display:flex;align-items:flex-end;justify-content:center;padding:8px;box-sizing:border-box;">
-        <div style="width:100%;height:55%;background:#9FE3EA;border-radius:4px 4px 6px 6px;"></div>
-      </div>
-      <div>
-        <div style="font-size:20px;font-weight:700;letter-spacing:-.01em;">Private Cloud</div>
-        <div style="font-size:13px;color:#5B6B77;">Your files, behind a password</div>
-      </div>
-    </div>
-
-    <!-- Flask: POST /login with field name="password". On a wrong password, redirect to /login?error=1 -->
-    <form method="POST" action="/login" style="margin:0;">
-      <label for="password" style="display:block;font-size:14px;font-weight:600;margin-bottom:8px;">Password</label>
-      <input id="password" type="password" name="password" required autofocus autocomplete="current-password" placeholder="Enter your cloud password"
-        style="width:100%;box-sizing:border-box;padding:14px 14px;font-size:16px;border:1.5px solid #C9D3DA;border-radius:12px;background:#F7F9FA;color:#14212B;margin-bottom:12px;">
-
-      <div id="error" role="alert" style="display:none;background:#FCEBEA;color:#9B1C14;border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px;">
-        That password didn’t match. Try again.
-      </div>
-
-      <button type="submit" style="width:100%;padding:14px;font-size:16px;font-weight:600;color:#FFFFFF;background:#0F6E7A;border:0;border-radius:12px;cursor:pointer;">
-        Sign in
-      </button>
-    </form>
-	
-<hr style="margin: 1.5rem 0; border-color: #334155;">
-<div style="text-align: left;">
-  <label style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">Friend / Recruiter Preview?</label>
-  <div style="display: flex; gap: 8px; margin-top: 6px;">
-    <input type="text" id="guestName" placeholder="Enter your name" style="flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #f8fafc;">
-    <button type="button" id="reqBtn" onclick="requestGuestAccess()" style="padding: 8px 14px; border-radius: 6px; background: #0284c7; color: #ffffff; font-weight: 600; border: none; cursor: pointer;">Request Link</button>
+  <div class="brand">
+    <div class="logo"><i></i></div>
+    <h1>MyPrivateCloud</h1>
+    <p>Your files, behind two locks</p>
   </div>
-  <p id="guestStatus" style="font-size: 0.85rem; color: #38bdf8; margin-top: 8px; font-weight: 500;"></p>
 
-  <!-- Auto-revealed inline box once Sanjay clicks Approve -->
-  <div id="guestLinkBox" style="display: none; margin-top: 10px; padding: 10px; border-radius: 8px; background: #ecfdf5; border: 1px solid #10b981; color: #064e3b;">
-    <div style="font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">✅ Approved! Single-use read-only link:</div>
-    <input type="text" id="generatedLink" readonly style="width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid #6ee7b7; background: #ffffff; color: #064e3b; font-size: 0.8rem; margin-bottom: 8px;">
-    <div style="display: flex; gap: 8px;">
-      <a id="openPreviewBtn" href="#" style="flex: 1; text-align: center; padding: 7px 10px; border-radius: 6px; background: #059669; color: #ffffff; text-decoration: none; font-size: 0.85rem; font-weight: 600;">Open Preview →</a>
-      <button type="button" onclick="copyGuestLink()" style="padding: 7px 12px; border-radius: 6px; background: #0f172a; color: #ffffff; border: none; font-size: 0.85rem; cursor: pointer;">Copy</button>
-    </div>
+  <div class="card">
+
+    {% if not admin_exists %}
+    <!-- First-time setup (automatically disappears once Admin is created) -->
+    <section data-view="setup">
+      <h2>First-Time Setup: Create Admin Account</h2>
+      <p class="lead">No accounts exist yet. The first account you register becomes the system administrator.</p>
+      {% if reg_error %}<div class="alert err" role="alert">{{ reg_error }}</div>{% endif %}
+      <form method="POST" action="/register" class="stack">
+        <input type="text" name="username" required pattern="[a-z0-9_]{3,20}" autocomplete="username" autocapitalize="none" placeholder="Lowercase username (3–20 chars)">
+        <input type="email" name="email" required autocomplete="email" placeholder="Email ID">
+        <input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Password (min 6 characters)">
+        <button type="submit" class="btn primary">Create Admin Account</button>
+      </form>
+    </section>
+
+    {% else %}
+
+    <!-- Home: choose an action -->
+    <section data-view="home">
+      <h2>Welcome</h2>
+      <p class="lead">Sign in to open your files, or create an account to get started.</p>
+      <div class="stack">
+        <button type="button" class="btn primary" data-go="login">Sign In</button>
+        <button type="button" class="btn" data-go="register">Create Account</button>
+      </div>
+    </section>
+
+    <!-- Sign in -->
+    <section data-view="login" hidden>
+      <button type="button" class="back" data-go="home">Back</button>
+      <h2>Sign In</h2>
+      <p class="lead">Use your password and the 6-digit code from your Authenticator app.</p>
+      {% if error %}<div class="alert err" role="alert">{{ error }}</div>{% endif %}
+      <form method="POST" action="/login" class="stack">
+        <input type="text" name="username" required autocomplete="username" autocapitalize="none" placeholder="Username or Email">
+        <input type="password" name="password" required autocomplete="current-password" placeholder="Password">
+        <input type="text" name="otp" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit Authenticator Code">
+        <button type="submit" class="btn primary">Sign In</button>
+      </form>
+    </section>
+
+    <!-- Register -->
+    <section data-view="register" hidden>
+      <button type="button" class="back" data-go="home">Back</button>
+      <h2>Create Account</h2>
+      <p class="lead">New accounts can sign in only after the administrator approves them.</p>
+      {% if reg_error %}<div class="alert err" role="alert">{{ reg_error }}</div>{% endif %}
+      <form method="POST" action="/register" class="stack">
+        <input type="text" name="username" required pattern="[a-z0-9_]{3,20}" autocomplete="username" autocapitalize="none" placeholder="Lowercase username (3–20 chars)">
+        <input type="email" name="email" required autocomplete="email" placeholder="Email ID">
+        <input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="Password (min 6 characters)">
+        <button type="submit" class="btn primary">Create Account</button>
+      </form>
+    </section>
+
+    {% endif %}
+
+    {% if qr_uri and totp_secret %}
+    <!-- 2FA setup -->
+    <section data-view="twofa" hidden>
+      <h2>Set up your Authenticator app</h2>
+      <p class="lead">Scan this code in Google Authenticator or Microsoft Authenticator before you sign in.</p>
+      {% if reg_success %}<div class="alert ok" role="status">{{ reg_success }}</div>{% endif %}
+      <img class="qr" src="{{ qr_uri }}" alt="Authenticator QR code">
+      <p class="lead" style="margin-bottom:8px;">Can’t scan? Enter this key manually:</p>
+      <div class="secret">
+        <code id="totpSecret">{{ totp_secret }}</code>
+        <button type="button" class="btn small" id="copySecret">Copy key</button>
+      </div>
+      {% if not is_first_admin %}
+      <div class="alert warn">Your account is locked until the Administrator approves it. Once approved, click below to sign in.</div>
+      {% endif %}
+      <button type="button" class="btn primary" data-go="login">Continue to Sign In</button>
+    </section>
+    {% endif %}
+
   </div>
-</div>
+
+  <p class="foot">Sign-in needs your password and your Authenticator code.</p>
+</main>
 
 <script>
-let pollTimer = null;
-
-async function requestGuestAccess() {
-  const name = document.getElementById("guestName").value.trim();
-  const statusEl = document.getElementById("guestStatus");
-  const btn = document.getElementById("reqBtn");
-  if (!name) { statusEl.textContent = "Please enter your name first."; return; }
-
-  btn.disabled = true;
-  btn.textContent = "Waiting...";
-  const res = await fetch("/request-guest", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name })
-  });
-  const data = await res.json();
-  statusEl.textContent = data.message || data.error;
-
-  if (data.req_id) {
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(() => checkApproval(data.req_id), 3000);
-  } else {
-    btn.disabled = false;
-    btn.textContent = "Request Link";
-  }
-}
-
-async function checkApproval(reqId) {
-  const res = await fetch(`/check-guest/${reqId}`);
-  const data = await res.json();
-  const statusEl = document.getElementById("guestStatus");
-  const btn = document.getElementById("reqBtn");
-
-  if (data.status === "approved" && data.one_time_link) {
-    clearInterval(pollTimer);
-    statusEl.textContent = "";
-    btn.textContent = "Approved";
-    document.getElementById("generatedLink").value = data.one_time_link;
-    document.getElementById("openPreviewBtn").href = data.one_time_link;
-    document.getElementById("guestLinkBox").style.display = "block";
-  } else if (data.status === "denied" || data.status === "expired") {
-    clearInterval(pollTimer);
-    statusEl.style.color = "#f87171";
-    statusEl.textContent = "Request was declined or expired.";
-    btn.disabled = false;
-    btn.textContent = "Request Link";
-  }
-}
-
-function copyGuestLink() {
-  const input = document.getElementById("generatedLink");
-  input.select();
-  navigator.clipboard?.writeText(input.value);
-}
-</script>
-
-    <p style="margin:20px 0 0;font-size:12.5px;line-height:1.5;color:#5B6B77;text-align:center;">
-      Only people with the password can view, upload or download files.
-    </p>
-  </main>
-
-  <script>
-    if (new URLSearchParams(location.search).get('error')) {
-      document.getElementById('error').style.display = 'block';
+  (function () {
+    var views = document.querySelectorAll('section[data-view]');
+    function show(name) {
+      var found = false;
+      views.forEach(function (v) { var on = v.getAttribute('data-view') === name; v.hidden = !on; if (on) found = true; });
+      if (!found && views.length) views[0].hidden = false;
+      window.scrollTo(0, 0);
     }
-  </script>
+    document.querySelectorAll('[data-go]').forEach(function (b) {
+      b.addEventListener('click', function () { show(b.getAttribute('data-go')); });
+    });
+    show(document.body.getAttribute('data-view'));
+
+    var copy = document.getElementById('copySecret');
+    if (copy) copy.addEventListener('click', function () {
+      var text = document.getElementById('totpSecret').textContent.trim();
+      function done() { copy.textContent = 'Copied'; setTimeout(function () { copy.textContent = 'Copy key'; }, 1800); }
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done);
+      else { var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); done(); }
+    });
+  })();
+</script>
 </body>
 </html>
